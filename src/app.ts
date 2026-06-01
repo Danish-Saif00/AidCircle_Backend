@@ -3,8 +3,13 @@ import cors from "cors";
 import express, { type Express, type Request, type Response } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import swaggerUi from "swagger-ui-express";
 
 import { env } from "./config/env.js";
+import { openApiDocument } from "./config/openapi.js";
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import { notFoundMiddleware } from "./middleware/not-found.middleware.js";
+import { apiRouter } from "./routes/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -46,12 +51,25 @@ export function createApp(): Express {
     });
   });
 
-  app.get("/api/v1", (_req: Request, res: Response) => {
-    res.status(200).json({
-      success: true,
-      message: `${env.app.name} API v1`,
-    });
+  app.get("/api-docs.json", (_req: Request, res: Response) => {
+    res.status(200).json(openApiDocument);
   });
+
+  app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(openApiDocument, {
+      customSiteTitle: "AidCircle API Docs",
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    }),
+  );
+
+  app.use("/api/v1", apiRouter);
+
+  app.use(notFoundMiddleware);
+  app.use(errorMiddleware);
 
   return app;
 }
