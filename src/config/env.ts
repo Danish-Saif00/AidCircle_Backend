@@ -3,6 +3,18 @@ import { z } from "zod";
 
 dotenv.config();
 
+const optionalNonEmptyString = z
+  .string()
+  .trim()
+  .transform((value) => (value.length > 0 ? value : undefined))
+  .optional();
+
+const optionalEmail = z
+  .string()
+  .trim()
+  .transform((value) => (value.length > 0 ? value : undefined))
+  .pipe(z.string().email().optional());
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -17,9 +29,9 @@ const envSchema = z.object({
 
   SUPABASE_ANON_KEY: z.string().min(1, "SUPABASE_ANON_KEY is required"),
 
-  FIREBASE_PROJECT_ID: z.string().optional(),
-  FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
-  FIREBASE_PRIVATE_KEY: z.string().optional(),
+  FIREBASE_PROJECT_ID: optionalNonEmptyString,
+  FIREBASE_CLIENT_EMAIL: optionalEmail,
+  FIREBASE_PRIVATE_KEY: optionalNonEmptyString,
 
   APP_NAME: z.string().min(1).default("AidCircle"),
 
