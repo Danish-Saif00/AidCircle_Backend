@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from "express";
 import { authRouter } from "../modules/auth/auth.routes.js";
 import { emergenciesRouter } from "../modules/emergencies/emergencies.routes.js";
 import { locationsRouter } from "../modules/locations/locations.routes.js";
+import { respondersRouter } from "../modules/responders/responders.routes.js";
 import { usersRouter } from "../modules/users/users.routes.js";
 
 const router = Router();
@@ -35,5 +36,6 @@ router.use("/auth", authRouter);
 router.use("/users", usersRouter);
 router.use("/locations", locationsRouter);
 router.use("/emergencies", emergenciesRouter);
+router.use("/responders", respondersRouter);
 
 export const apiRouter = router;

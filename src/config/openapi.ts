@@ -166,6 +166,26 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/v1/responders": {
+      get: {
+        tags: ["Responders"],
+        summary: "Get Responders module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Responders module is mounted.",
+        responses: {
+          "200": {
+            description: "Responders module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RespondersModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -461,6 +481,47 @@ export const openApiDocument = {
                   "PATCH /api/v1/emergencies/:emergencyId/cancel",
                   "PATCH /api/v1/emergencies/:emergencyId/resolve",
                   "GET /api/v1/emergencies/me/history",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+      RespondersModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Responders module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "responders",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "POST /api/v1/responders/emergencies/:emergencyId/accept",
+                  "PATCH /api/v1/responders/emergencies/:emergencyId/status",
+                  "DELETE /api/v1/responders/emergencies/:emergencyId/leave",
+                  "GET /api/v1/responders/me/active",
+                  "GET /api/v1/responders/me/history",
                 ],
               },
             },
