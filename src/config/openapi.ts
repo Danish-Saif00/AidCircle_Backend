@@ -109,6 +109,42 @@ export const openApiDocument = {
       },
     },
 
+    "/api/v1/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get authenticated user",
+        description:
+          "Returns the currently authenticated user from the provided Supabase bearer token.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Authenticated user returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthMeResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
     "/api/v1/users": {
       get: {
         tags: ["Users"],
@@ -130,6 +166,136 @@ export const openApiDocument = {
       },
     },
 
+    "/api/v1/users/me": {
+      get: {
+        tags: ["Users"],
+        summary: "Get my user profile",
+        description:
+          "Returns the authenticated user's AidCircle profile from the user_profiles table.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "User profile returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserProfileResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "User profile not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch user profile.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+
+      patch: {
+        tags: ["Users"],
+        summary: "Update my user profile",
+        description:
+          "Updates allowed editable profile fields for the authenticated user.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateUserProfileRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "User profile updated successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserProfileResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Validation failed.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "User profile not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to update user profile.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
     "/api/v1/locations": {
       get: {
         tags: ["Locations"],
@@ -143,6 +309,126 @@ export const openApiDocument = {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/LocationsModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/locations/me": {
+      get: {
+        tags: ["Locations"],
+        summary: "Get my current location",
+        description:
+          "Returns the authenticated user's last known location from the user_locations table.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "User location returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserLocationResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "User location not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch user location.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+
+      post: {
+        tags: ["Locations"],
+        summary: "Create or update my current location",
+        description:
+          "Creates or updates the authenticated user's last known location. The database trigger builds the PostGIS location_point automatically.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpsertUserLocationRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "User location updated successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserLocationResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Validation failed.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to update user location.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
                 },
               },
             },
@@ -422,6 +708,55 @@ export const openApiDocument = {
         required: ["success", "message", "data"],
       },
 
+      AuthUser: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          email: {
+            type: "string",
+            format: "email",
+            example: "user@example.com",
+          },
+          phone: {
+            type: "string",
+            example: "+923001234567",
+          },
+          role: {
+            type: "string",
+            example: "user",
+          },
+        },
+        required: ["id"],
+      },
+
+      AuthMeResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Authenticated user returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              user: {
+                $ref: "#/components/schemas/AuthUser",
+              },
+            },
+            required: ["user"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
       UsersModuleStatusResponse: {
         type: "object",
         properties: {
@@ -463,6 +798,147 @@ export const openApiDocument = {
         required: ["success", "message", "data"],
       },
 
+      UserProfile: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          fullName: {
+            type: "string",
+            example: "Ahmad Sajid",
+          },
+          phone: {
+            type: "string",
+            nullable: true,
+            example: "+923001234567",
+          },
+          email: {
+            type: "string",
+            format: "email",
+            nullable: true,
+            example: "user@example.com",
+          },
+          avatarUrl: {
+            type: "string",
+            nullable: true,
+            example: "https://example.com/avatar.png",
+          },
+          role: {
+            type: "string",
+            example: "user",
+          },
+          isVerified: {
+            type: "boolean",
+            example: false,
+          },
+          isHelperAvailable: {
+            type: "boolean",
+            example: true,
+          },
+          isBlocked: {
+            type: "boolean",
+            example: false,
+          },
+          bloodGroup: {
+            type: "string",
+            nullable: true,
+            example: "O+",
+          },
+          medicalNotes: {
+            type: "string",
+            nullable: true,
+            example: "No known allergies",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "fullName",
+          "phone",
+          "email",
+          "avatarUrl",
+          "role",
+          "isVerified",
+          "isHelperAvailable",
+          "isBlocked",
+          "bloodGroup",
+          "medicalNotes",
+          "createdAt",
+          "updatedAt",
+        ],
+      },
+
+      UpdateUserProfileRequest: {
+        type: "object",
+        properties: {
+          fullName: {
+            type: "string",
+            minLength: 2,
+            maxLength: 120,
+            example: "Ahmad Sajid",
+          },
+          avatarUrl: {
+            type: "string",
+            format: "uri",
+            nullable: true,
+            example: "https://example.com/avatar.png",
+          },
+          isHelperAvailable: {
+            type: "boolean",
+            example: true,
+          },
+          bloodGroup: {
+            type: "string",
+            nullable: true,
+            minLength: 1,
+            maxLength: 10,
+            example: "O+",
+          },
+          medicalNotes: {
+            type: "string",
+            nullable: true,
+            maxLength: 500,
+            example: "No known allergies",
+          },
+        },
+        additionalProperties: false,
+        minProperties: 1,
+      },
+
+      UserProfileResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "User profile returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              profile: {
+                $ref: "#/components/schemas/UserProfile",
+              },
+            },
+            required: ["profile"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
       LocationsModuleStatusResponse: {
         type: "object",
         properties: {
@@ -499,6 +975,101 @@ export const openApiDocument = {
               },
             },
             required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      UpsertUserLocationRequest: {
+        type: "object",
+        properties: {
+          latitude: {
+            type: "number",
+            minimum: -90,
+            maximum: 90,
+            example: 31.5204,
+          },
+          longitude: {
+            type: "number",
+            minimum: -180,
+            maximum: 180,
+            example: 74.3587,
+          },
+          accuracyMeters: {
+            type: "number",
+            nullable: true,
+            example: 12,
+          },
+        },
+        required: ["latitude", "longitude"],
+        additionalProperties: false,
+      },
+
+      UserLocation: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "e33f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          userId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          latitude: {
+            type: "number",
+            example: 31.5204,
+          },
+          longitude: {
+            type: "number",
+            example: 74.3587,
+          },
+          accuracyMeters: {
+            type: "number",
+            nullable: true,
+            example: 12,
+          },
+          lastUpdatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "userId",
+          "latitude",
+          "longitude",
+          "accuracyMeters",
+          "lastUpdatedAt",
+          "createdAt",
+        ],
+      },
+
+      UserLocationResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "User location returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              location: {
+                $ref: "#/components/schemas/UserLocation",
+              },
+            },
+            required: ["location"],
           },
         },
         required: ["success", "message", "data"],
