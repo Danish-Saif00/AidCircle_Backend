@@ -106,6 +106,66 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/v1/users": {
+      get: {
+        tags: ["Users"],
+        summary: "Get Users module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Users module is mounted.",
+        responses: {
+          "200": {
+            description: "Users module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UsersModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/locations": {
+      get: {
+        tags: ["Locations"],
+        summary: "Get Locations module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Locations module is mounted.",
+        responses: {
+          "200": {
+            description: "Locations module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/LocationsModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/emergencies": {
+      get: {
+        tags: ["Emergencies"],
+        summary: "Get Emergencies module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Emergencies module is mounted.",
+        responses: {
+          "200": {
+            description: "Emergencies module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergenciesModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -279,6 +339,128 @@ export const openApiDocument = {
                   "POST /api/v1/auth/logout",
                   "POST /api/v1/auth/refresh",
                   "GET /api/v1/auth/me",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+      UsersModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Users module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "users",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "GET /api/v1/users/me",
+                  "PATCH /api/v1/users/me",
+                  "DELETE /api/v1/users/me",
+                  "GET /api/v1/users/:userId",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+      LocationsModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Locations module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "locations",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "POST /api/v1/locations/me",
+                  "GET /api/v1/locations/me",
+                  "GET /api/v1/locations/nearby-users",
+                  "GET /api/v1/locations/nearby-emergencies",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+      EmergenciesModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Emergencies module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "emergencies",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "POST /api/v1/emergencies",
+                  "GET /api/v1/emergencies",
+                  "GET /api/v1/emergencies/:emergencyId",
+                  "PATCH /api/v1/emergencies/:emergencyId/cancel",
+                  "PATCH /api/v1/emergencies/:emergencyId/resolve",
+                  "GET /api/v1/emergencies/me/history",
                 ],
               },
             },
