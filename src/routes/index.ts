@@ -3,6 +3,8 @@ import { Router, type Request, type Response } from "express";
 import { authRouter } from "../modules/auth/auth.routes.js";
 import { emergenciesRouter } from "../modules/emergencies/emergencies.routes.js";
 import { locationsRouter } from "../modules/locations/locations.routes.js";
+import { notificationsRouter } from "../modules/notifications/notifications.routes.js";
+import { reportsRouter } from "../modules/reports/reports.routes.js";
 import { respondersRouter } from "../modules/responders/responders.routes.js";
 import { usersRouter } from "../modules/users/users.routes.js";
 
@@ -37,5 +39,7 @@ router.use("/users", usersRouter);
 router.use("/locations", locationsRouter);
 router.use("/emergencies", emergenciesRouter);
 router.use("/responders", respondersRouter);
+router.use("/notifications", notificationsRouter);
+router.use("/reports", reportsRouter);
 
 export const apiRouter = router;

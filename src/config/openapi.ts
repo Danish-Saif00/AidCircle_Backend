@@ -66,6 +66,7 @@ export const openApiDocument = {
         },
       },
     },
+
     "/api/v1": {
       get: {
         tags: ["System"],
@@ -86,6 +87,7 @@ export const openApiDocument = {
         },
       },
     },
+
     "/api/v1/auth": {
       get: {
         tags: ["Auth"],
@@ -106,6 +108,7 @@ export const openApiDocument = {
         },
       },
     },
+
     "/api/v1/users": {
       get: {
         tags: ["Users"],
@@ -126,6 +129,7 @@ export const openApiDocument = {
         },
       },
     },
+
     "/api/v1/locations": {
       get: {
         tags: ["Locations"],
@@ -146,6 +150,7 @@ export const openApiDocument = {
         },
       },
     },
+
     "/api/v1/emergencies": {
       get: {
         tags: ["Emergencies"],
@@ -166,6 +171,7 @@ export const openApiDocument = {
         },
       },
     },
+
     "/api/v1/responders": {
       get: {
         tags: ["Responders"],
@@ -186,7 +192,50 @@ export const openApiDocument = {
         },
       },
     },
+
+    "/api/v1/notifications": {
+      get: {
+        tags: ["Notifications"],
+        summary: "Get Notifications module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Notifications module is mounted.",
+        responses: {
+          "200": {
+            description: "Notifications module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotificationsModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/reports": {
+      get: {
+        tags: ["Reports"],
+        summary: "Get Reports module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Reports module is mounted.",
+        responses: {
+          "200": {
+            description: "Reports module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ReportsModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
+
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -197,6 +246,7 @@ export const openApiDocument = {
           "Bearer token issued by the authentication provider and sent as Authorization: Bearer <token>.",
       },
     },
+
     schemas: {
       ApiErrorDetail: {
         type: "object",
@@ -216,6 +266,7 @@ export const openApiDocument = {
         },
         required: ["message"],
       },
+
       ApiErrorResponse: {
         type: "object",
         properties: {
@@ -246,6 +297,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "error"],
       },
+
       HealthResponse: {
         type: "object",
         properties: {
@@ -269,6 +321,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "environment", "timestamp"],
       },
+
       ApiRootResponse: {
         type: "object",
         properties: {
@@ -326,6 +379,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "data"],
       },
+
       AuthModuleStatusResponse: {
         type: "object",
         properties: {
@@ -367,6 +421,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "data"],
       },
+
       UsersModuleStatusResponse: {
         type: "object",
         properties: {
@@ -407,6 +462,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "data"],
       },
+
       LocationsModuleStatusResponse: {
         type: "object",
         properties: {
@@ -447,6 +503,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "data"],
       },
+
       EmergenciesModuleStatusResponse: {
         type: "object",
         properties: {
@@ -489,6 +546,7 @@ export const openApiDocument = {
         },
         required: ["success", "message", "data"],
       },
+
       RespondersModuleStatusResponse: {
         type: "object",
         properties: {
@@ -522,6 +580,90 @@ export const openApiDocument = {
                   "DELETE /api/v1/responders/emergencies/:emergencyId/leave",
                   "GET /api/v1/responders/me/active",
                   "GET /api/v1/responders/me/history",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      NotificationsModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Notifications module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "notifications",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "POST /api/v1/notifications/devices",
+                  "DELETE /api/v1/notifications/devices/:deviceId",
+                  "GET /api/v1/notifications/me",
+                  "PATCH /api/v1/notifications/:notificationId/read",
+                  "POST /api/v1/notifications/test-push",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      ReportsModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Reports module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "reports",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "POST /api/v1/reports/emergencies/:emergencyId",
+                  "POST /api/v1/reports/users/:userId",
+                  "GET /api/v1/reports/me",
+                  "GET /api/v1/reports/admin",
+                  "PATCH /api/v1/reports/admin/:reportId/status",
                 ],
               },
             },
