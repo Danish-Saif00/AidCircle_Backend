@@ -1,5 +1,8 @@
 import { Router, type Request, type Response } from "express";
 
+import { authRouter } from "../modules/auth/auth.routes.js";
+import { usersRouter } from "../modules/users/users.routes.js";
+
 const router = Router();
 
 router.get("/", (_req: Request, res: Response) => {
@@ -25,5 +28,8 @@ router.get("/", (_req: Request, res: Response) => {
     },
   });
 });
+
+router.use("/auth", authRouter);
+router.use("/users", usersRouter);
 
 export const apiRouter = router;

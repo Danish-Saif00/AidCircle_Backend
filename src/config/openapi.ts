@@ -86,6 +86,26 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/v1/auth": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get Auth module status",
+        description:
+          "Temporary scaffold endpoint that confirms the Auth module is mounted.",
+        responses: {
+          "200": {
+            description: "Auth module status returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -203,7 +223,7 @@ export const openApiDocument = {
                   "emergencies",
                   "responders",
                   "notifications",
-                  "reports"
+                  "reports",
                 ],
               },
               documentation: {
@@ -222,6 +242,47 @@ export const openApiDocument = {
               },
             },
             required: ["service", "version", "modules", "documentation"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+      AuthModuleStatusResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Auth module is available",
+          },
+          data: {
+            type: "object",
+            properties: {
+              module: {
+                type: "string",
+                example: "auth",
+              },
+              status: {
+                type: "string",
+                example: "scaffolded",
+              },
+              plannedEndpoints: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: [
+                  "POST /api/v1/auth/signup",
+                  "POST /api/v1/auth/login",
+                  "POST /api/v1/auth/logout",
+                  "POST /api/v1/auth/refresh",
+                  "GET /api/v1/auth/me",
+                ],
+              },
+            },
+            required: ["module", "status", "plannedEndpoints"],
           },
         },
         required: ["success", "message", "data"],
