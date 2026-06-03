@@ -127,17 +127,34 @@ function mapZodError(error: ZodError): ApiErrorDetail[] {
   });
 }
 
-function buildErrorResponse(error: AppError): ApiErrorResponse {
+function getResponseRequestId(res: Response): string | undefined {
+  const requestId = res.locals.requestId;
+
+  if (typeof requestId !== "string" || requestId.length === 0) {
+    return undefined;
+  }
+
+  return requestId;
+}
+
+function buildErrorResponse(params: {
+  error: AppError;
+  requestId: string | undefined;
+}): ApiErrorResponse {
   const response: ApiErrorResponse = {
     success: false,
-    message: error.message,
+    message: params.error.message,
     error: {
-      code: error.code,
+      code: params.error.code,
     },
   };
 
-  if (error.details !== undefined) {
-    response.error.details = error.details;
+  if (params.requestId !== undefined) {
+    response.requestId = params.requestId;
+  }
+
+  if (params.error.details !== undefined) {
+    response.error.details = params.error.details;
   }
 
   return response;
@@ -149,18 +166,30 @@ export function errorMiddleware(
   res: Response<ApiErrorResponse>,
   _next: NextFunction,
 ): void {
+  const requestId = getResponseRequestId(res);
+
   if (error instanceof ZodError) {
     const validationError = AppError.badRequest(
       "Validation failed",
       mapZodError(error),
     );
 
-    res.status(validationError.statusCode).json(buildErrorResponse(validationError));
+    res.status(validationError.statusCode).json(
+      buildErrorResponse({
+        error: validationError,
+        requestId,
+      }),
+    );
     return;
   }
 
   if (error instanceof AppError) {
-    res.status(error.statusCode).json(buildErrorResponse(error));
+    res.status(error.statusCode).json(
+      buildErrorResponse({
+        error,
+        requestId,
+      }),
+    );
     return;
   }
 
@@ -170,11 +199,17 @@ export function errorMiddleware(
     JSON.stringify({
       level: "error",
       event: "UNHANDLED_APP_ERROR",
+      requestId,
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
     }),
   );
 
-  res.status(internalError.statusCode).json(buildErrorResponse(internalError));
+  res.status(internalError.statusCode).json(
+    buildErrorResponse({
+      error: internalError,
+      requestId,
+    }),
+  );
 }

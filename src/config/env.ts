@@ -38,6 +38,8 @@ const envSchema = z.object({
   DEFAULT_ALERT_RADIUS_KM: z.coerce.number().positive().default(5),
 
   SOS_AUTO_EXPIRE_MINUTES: z.coerce.number().int().positive().default(120),
+
+  CORS_ALLOWED_ORIGINS: z.string().trim().optional().default(""),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -51,6 +53,13 @@ if (!parsedEnv.success) {
     .join("\n");
 
   throw new Error(`Invalid environment configuration:\n${formattedErrors}`);
+}
+
+function parseAllowedOrigins(value: string): string[] {
+  return value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
 }
 
 export const env = {
@@ -73,6 +82,10 @@ export const env = {
     name: parsedEnv.data.APP_NAME,
     defaultAlertRadiusKm: parsedEnv.data.DEFAULT_ALERT_RADIUS_KM,
     sosAutoExpireMinutes: parsedEnv.data.SOS_AUTO_EXPIRE_MINUTES,
+  },
+
+  cors: {
+    allowedOrigins: parseAllowedOrigins(parsedEnv.data.CORS_ALLOWED_ORIGINS),
   },
 } as const;
 

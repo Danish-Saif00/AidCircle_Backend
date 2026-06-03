@@ -358,7 +358,7 @@ export const openApiDocument = {
         tags: ["Users"],
         summary: "Get Users module status",
         description:
-          "Temporary scaffold endpoint that confirms the Users module is mounted.",
+          "Returns user module metadata and available user endpoints.",
         responses: {
           "200": {
             description: "Users module status returned successfully.",
@@ -421,6 +421,122 @@ export const openApiDocument = {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/UserProfileResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+
+      delete: {
+        tags: ["Users"],
+        summary: "Delete my account",
+        description:
+          "Deletes the authenticated user's Supabase auth account. Related profile data is removed through database cascade rules.",
+        security: bearerSecurity,
+        responses: {
+          "200": {
+            description: "User account deleted successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/DeleteAccountResponse",
+                },
+              },
+            },
+          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/users/admin": {
+      get: {
+        tags: ["Users"],
+        summary: "Get admin user list",
+        description:
+          "Returns latest user profiles for admin review. Requires user_profiles.role = admin.",
+        security: bearerSecurity,
+        responses: {
+          "200": {
+            description: "Admin users returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserProfilesResponse",
+                },
+              },
+            },
+          },
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/users/admin/{userId}": {
+      patch: {
+        tags: ["Users"],
+        summary: "Update user admin fields",
+        description:
+          "Allows an admin to update a user's role, verification state, blocked state, or helper availability.",
+        security: bearerSecurity,
+        parameters: [
+          uuidPathParameter("userId", "2f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f"),
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/AdminUpdateUserRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "User admin fields updated successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserProfileResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/users/{userId}": {
+      get: {
+        tags: ["Users"],
+        summary: "Get public user profile",
+        description:
+          "Returns a public-safe profile for one user. Private fields such as phone, email, blood group, and medical notes are not returned.",
+        security: bearerSecurity,
+        parameters: [
+          uuidPathParameter("userId", "2f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f"),
+        ],
+        responses: {
+          "200": {
+            description: "Public user profile returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/PublicUserProfileResponse",
                 },
               },
             },
@@ -1363,6 +1479,10 @@ export const openApiDocument = {
             type: "string",
             example: "Validation failed",
           },
+          requestId: {
+            type: "string",
+            example: "c9f2f1d4-0c8d-4f2d-9f6b-2c7d3f2a9b10",
+          },
           error: {
             type: "object",
             properties: {
@@ -1398,13 +1518,23 @@ export const openApiDocument = {
             type: "string",
             example: "development",
           },
+          requestId: {
+            type: "string",
+            example: "c9f2f1d4-0c8d-4f2d-9f6b-2c7d3f2a9b10",
+          },
           timestamp: {
             type: "string",
             format: "date-time",
             example: "2026-06-01T13:24:56.743Z",
           },
         },
-        required: ["success", "message", "environment", "timestamp"],
+        required: [
+          "success",
+          "message",
+          "environment",
+          "requestId",
+          "timestamp",
+        ],
       },
 
       ApiRootResponse: {
@@ -1735,7 +1865,7 @@ export const openApiDocument = {
               },
               status: {
                 type: "string",
-                example: "scaffolded",
+                example: "active",
               },
               plannedEndpoints: {
                 type: "array",
@@ -1747,6 +1877,8 @@ export const openApiDocument = {
                   "PATCH /api/v1/users/me",
                   "DELETE /api/v1/users/me",
                   "GET /api/v1/users/:userId",
+                  "GET /api/v1/users/admin",
+                  "PATCH /api/v1/users/admin/:userId",
                 ],
               },
             },
@@ -1895,6 +2027,163 @@ export const openApiDocument = {
           },
         },
         required: ["success", "message", "data"],
+      },
+
+      PublicUserProfile: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          fullName: {
+            type: "string",
+            example: "Ahmad Sajid",
+          },
+          avatarUrl: {
+            type: "string",
+            nullable: true,
+            example: "https://example.com/avatar.png",
+          },
+          role: {
+            type: "string",
+            example: "helper",
+          },
+          isVerified: {
+            type: "boolean",
+            example: true,
+          },
+          isHelperAvailable: {
+            type: "boolean",
+            example: true,
+          },
+          isBlocked: {
+            type: "boolean",
+            example: false,
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "fullName",
+          "avatarUrl",
+          "role",
+          "isVerified",
+          "isHelperAvailable",
+          "isBlocked",
+          "createdAt",
+          "updatedAt",
+        ],
+      },
+
+      PublicUserProfileResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Public user profile returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              profile: {
+                $ref: "#/components/schemas/PublicUserProfile",
+              },
+            },
+            required: ["profile"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      UserProfilesResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Admin users returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              profiles: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/UserProfile",
+                },
+              },
+            },
+            required: ["profiles"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      DeleteAccountResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "User account deleted successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              userId: {
+                type: "string",
+                format: "uuid",
+                example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+              },
+            },
+            required: ["userId"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      AdminUpdateUserRequest: {
+        type: "object",
+        properties: {
+          role: {
+            type: "string",
+            enum: ["user", "helper", "admin"],
+            example: "helper",
+          },
+          isVerified: {
+            type: "boolean",
+            example: true,
+          },
+          isBlocked: {
+            type: "boolean",
+            example: false,
+          },
+          isHelperAvailable: {
+            type: "boolean",
+            example: true,
+          },
+        },
+        additionalProperties: false,
+        minProperties: 1,
       },
 
       LocationsModuleStatusResponse: {

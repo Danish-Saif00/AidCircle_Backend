@@ -2,6 +2,7 @@ export type ApiSuccessResponse<TData = unknown> = {
   success: true;
   message: string;
   data?: TData;
+  requestId?: string;
 };
 
 export type ApiErrorDetail = {
@@ -13,6 +14,7 @@ export type ApiErrorDetail = {
 export type ApiErrorResponse = {
   success: false;
   message: string;
+  requestId?: string;
   error: {
     code: string;
     details?: ApiErrorDetail[];
