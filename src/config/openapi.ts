@@ -1,3 +1,91 @@
+const bearerSecurity = [
+  {
+    bearerAuth: [],
+  },
+] as const;
+
+const apiErrorResponse = {
+  description: "Request failed.",
+  content: {
+    "application/json": {
+      schema: {
+        $ref: "#/components/schemas/ApiErrorResponse",
+      },
+    },
+  },
+} as const;
+
+const unauthorizedResponse = {
+  description: "Missing, invalid, or expired authentication token.",
+  content: {
+    "application/json": {
+      schema: {
+        $ref: "#/components/schemas/ApiErrorResponse",
+      },
+    },
+  },
+} as const;
+
+const validationFailedResponse = {
+  description: "Validation failed.",
+  content: {
+    "application/json": {
+      schema: {
+        $ref: "#/components/schemas/ApiErrorResponse",
+      },
+    },
+  },
+} as const;
+
+const uuidPathParameter = (name: string, example: string) =>
+  ({
+    name,
+    in: "path",
+    required: true,
+    schema: {
+      type: "string",
+      format: "uuid",
+    },
+    example,
+  }) as const;
+
+const nearbyLocationQueryParameters = [
+  {
+    name: "latitude",
+    in: "query",
+    required: true,
+    schema: {
+      type: "number",
+      minimum: -90,
+      maximum: 90,
+    },
+    example: 31.5204,
+  },
+  {
+    name: "longitude",
+    in: "query",
+    required: true,
+    schema: {
+      type: "number",
+      minimum: -180,
+      maximum: 180,
+    },
+    example: 74.3587,
+  },
+  {
+    name: "radiusKm",
+    in: "query",
+    required: false,
+    schema: {
+      type: "number",
+      minimum: 0,
+      maximum: 50,
+      default: 5,
+    },
+    example: 5,
+  },
+] as const;
+
 export const openApiDocument = {
   openapi: "3.0.3",
   info: {
@@ -93,7 +181,7 @@ export const openApiDocument = {
         tags: ["Auth"],
         summary: "Get Auth module status",
         description:
-          "Temporary scaffold endpoint that confirms the Auth module is mounted.",
+          "Returns auth module metadata and available authentication endpoints.",
         responses: {
           "200": {
             description: "Auth module status returned successfully.",
@@ -109,17 +197,143 @@ export const openApiDocument = {
       },
     },
 
+    "/api/v1/auth/signup": {
+      post: {
+        tags: ["Auth"],
+        summary: "Sign up user",
+        description:
+          "Creates a Supabase auth user, creates the matching AidCircle user profile, and returns an authenticated session.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/SignupRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "User signed up successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "409": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log in user",
+        description:
+          "Authenticates a user with email and password and returns a Supabase session.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/LoginRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "User logged in successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/auth/refresh": {
+      post: {
+        tags: ["Auth"],
+        summary: "Refresh session",
+        description:
+          "Refreshes a Supabase session using a valid refresh token and returns a new session.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/RefreshSessionRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Session refreshed successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/auth/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log out user",
+        description:
+          "Revokes the authenticated user's Supabase session globally.",
+        security: bearerSecurity,
+        responses: {
+          "200": {
+            description: "User logged out successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthLogoutResponse",
+                },
+              },
+            },
+          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
     "/api/v1/auth/me": {
       get: {
         tags: ["Auth"],
         summary: "Get authenticated user",
         description:
-          "Returns the currently authenticated user from the provided Supabase bearer token.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+          "Returns the authenticated Supabase user and matching AidCircle user profile.",
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "Authenticated user returned successfully.",
@@ -131,16 +345,10 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -172,11 +380,7 @@ export const openApiDocument = {
         summary: "Get my user profile",
         description:
           "Returns the authenticated user's AidCircle profile from the user_profiles table.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "User profile returned successfully.",
@@ -188,36 +392,9 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "User profile not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch user profile.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
 
@@ -226,11 +403,7 @@ export const openApiDocument = {
         summary: "Update my user profile",
         description:
           "Updates allowed editable profile fields for the authenticated user.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         requestBody: {
           required: true,
           content: {
@@ -252,46 +425,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Validation failed.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "User profile not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to update user profile.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -301,7 +438,7 @@ export const openApiDocument = {
         tags: ["Locations"],
         summary: "Get Locations module status",
         description:
-          "Temporary scaffold endpoint that confirms the Locations module is mounted.",
+          "Returns location module metadata and available location endpoints.",
         responses: {
           "200": {
             description: "Locations module status returned successfully.",
@@ -323,11 +460,7 @@ export const openApiDocument = {
         summary: "Get my current location",
         description:
           "Returns the authenticated user's last known location from the user_locations table.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "User location returned successfully.",
@@ -339,36 +472,9 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "User location not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch user location.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
 
@@ -377,11 +483,7 @@ export const openApiDocument = {
         summary: "Create or update my current location",
         description:
           "Creates or updates the authenticated user's last known location. The database trigger builds the PostGIS location_point automatically.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         requestBody: {
           required: true,
           content: {
@@ -403,36 +505,61 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Validation failed.",
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/locations/nearby-users": {
+      get: {
+        tags: ["Locations"],
+        summary: "Find nearby available users",
+        description:
+          "Returns nearby available non-blocked users/helpers around a latitude and longitude using the PostGIS find_nearby_users RPC function.",
+        security: bearerSecurity,
+        parameters: nearbyLocationQueryParameters,
+        responses: {
+          "200": {
+            description: "Nearby users returned successfully.",
             content: {
               "application/json": {
                 schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
+                  $ref: "#/components/schemas/NearbyUsersResponse",
                 },
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/locations/nearby-emergencies": {
+      get: {
+        tags: ["Locations"],
+        summary: "Find nearby active emergencies",
+        description:
+          "Returns nearby active non-expired emergencies around a latitude and longitude using the PostGIS find_nearby_active_emergencies RPC function.",
+        security: bearerSecurity,
+        parameters: nearbyLocationQueryParameters,
+        responses: {
+          "200": {
+            description: "Nearby emergencies returned successfully.",
             content: {
               "application/json": {
                 schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
+                  $ref: "#/components/schemas/NearbyEmergenciesResponse",
                 },
               },
             },
           },
-          "500": {
-            description: "Failed to update user location.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -454,16 +581,7 @@ export const openApiDocument = {
               },
             },
           },
-          "500": {
-            description: "Failed to fetch emergency categories.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "500": apiErrorResponse,
         },
       },
     },
@@ -474,11 +592,7 @@ export const openApiDocument = {
         summary: "Get active emergencies",
         description:
           "Returns latest active emergencies. This endpoint requires authentication.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "Active emergencies returned successfully.",
@@ -490,26 +604,8 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch active emergencies.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
 
@@ -517,12 +613,8 @@ export const openApiDocument = {
         tags: ["Emergencies"],
         summary: "Create SOS emergency",
         description:
-          "Creates a new SOS emergency for the authenticated user. The database trigger builds the PostGIS location_point automatically.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+          "Creates a new SOS emergency for the authenticated user. The database trigger builds the PostGIS location_point automatically. After creation, the backend finds nearby available users through PostGIS RPC, creates notification records for them, and attempts Firebase push delivery when Firebase is configured.",
+        security: bearerSecurity,
         requestBody: {
           required: true,
           content: {
@@ -535,7 +627,8 @@ export const openApiDocument = {
         },
         responses: {
           "201": {
-            description: "Emergency created successfully.",
+            description:
+              "Emergency created successfully. Nearby notification fanout is attempted after creation, but emergency creation is not failed if notification delivery fails.",
             content: {
               "application/json": {
                 schema: {
@@ -544,36 +637,9 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Validation failed or emergency category is invalid.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to create emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -584,11 +650,7 @@ export const openApiDocument = {
         summary: "Get my emergency history",
         description:
           "Returns the authenticated user's emergency history ordered by latest first.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "Emergency history returned successfully.",
@@ -600,26 +662,8 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch emergency history.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -630,22 +674,12 @@ export const openApiDocument = {
         summary: "Get emergency detail",
         description:
           "Returns one emergency by id. This endpoint requires authentication.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "emergencyId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "200": {
@@ -658,46 +692,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Invalid emergency id.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "Emergency not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -708,22 +706,12 @@ export const openApiDocument = {
         summary: "Cancel my active emergency",
         description:
           "Cancels an active emergency owned by the authenticated requester.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "emergencyId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "200": {
@@ -736,47 +724,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Invalid emergency id.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description:
-              "Active emergency not found or requester is not allowed to update it.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to cancel emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -787,22 +738,12 @@ export const openApiDocument = {
         summary: "Resolve my active emergency",
         description:
           "Marks an active emergency owned by the authenticated requester as resolved.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "emergencyId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "200": {
@@ -815,47 +756,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Invalid emergency id.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description:
-              "Active emergency not found or requester is not allowed to update it.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to resolve emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -887,22 +791,12 @@ export const openApiDocument = {
         summary: "Accept an active emergency",
         description:
           "Allows an authenticated user to accept an active emergency as a responder. The requester cannot accept their own emergency.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "emergencyId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "201": {
@@ -926,57 +820,11 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description:
-              "Invalid emergency id, requester accepting own emergency, or emergency is not active.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "Emergency not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "409": {
-            description: "User has already accepted this emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to accept emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "409": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -987,22 +835,12 @@ export const openApiDocument = {
         summary: "Update responder status",
         description:
           "Updates the authenticated responder status for an active emergency.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "emergencyId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         requestBody: {
           required: true,
@@ -1025,47 +863,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Validation failed or emergency is not active.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description:
-              "Active responder record not found for this emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to update responder status.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1076,22 +877,12 @@ export const openApiDocument = {
         summary: "Leave an emergency response",
         description:
           "Marks the authenticated responder record as cancelled instead of deleting it, preserving audit history.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "emergencyId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "200": {
@@ -1104,47 +895,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Invalid emergency id.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description:
-              "Active responder record not found for this emergency.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to leave emergency response.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1155,11 +909,7 @@ export const openApiDocument = {
         summary: "Get my active responder records",
         description:
           "Returns authenticated user's active responder records with statuses accepted, on_way, or arrived.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "Active responder records returned successfully.",
@@ -1171,26 +921,8 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch active responder records.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1201,11 +933,7 @@ export const openApiDocument = {
         summary: "Get my responder history",
         description:
           "Returns authenticated user's responder history ordered by latest accepted time first.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "Responder history returned successfully.",
@@ -1217,26 +945,8 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch responder history.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1268,11 +978,7 @@ export const openApiDocument = {
         summary: "Register device token",
         description:
           "Registers or reactivates the authenticated user's Android or iOS device token for push notifications.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         requestBody: {
           required: true,
           content: {
@@ -1294,36 +1000,9 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Validation failed.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to register device.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1334,22 +1013,12 @@ export const openApiDocument = {
         summary: "Deactivate device token",
         description:
           "Deactivates one authenticated-user-owned device token without deleting audit data.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "deviceId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "7f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "deviceId",
+            "7f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "200": {
@@ -1362,46 +1031,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Invalid device id.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "Device not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to deactivate device.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1412,11 +1045,7 @@ export const openApiDocument = {
         summary: "Get my notifications",
         description:
           "Returns the authenticated user's notifications ordered by latest first.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         responses: {
           "200": {
             description: "Notifications returned successfully.",
@@ -1428,26 +1057,8 @@ export const openApiDocument = {
               },
             },
           },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to fetch notifications.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1458,22 +1069,12 @@ export const openApiDocument = {
         summary: "Mark notification as read",
         description:
           "Marks one authenticated-user-owned notification as read.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         parameters: [
-          {
-            name: "notificationId",
-            in: "path",
-            required: true,
-            schema: {
-              type: "string",
-              format: "uuid",
-            },
-            example: "8f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
-          },
+          uuidPathParameter(
+            "notificationId",
+            "8f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
         ],
         responses: {
           "200": {
@@ -1486,46 +1087,10 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Invalid notification id.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "404": {
-            description: "Notification not found.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description: "Failed to mark notification as read.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1536,11 +1101,7 @@ export const openApiDocument = {
         summary: "Send test push notification",
         description:
           "Creates a test notification and attempts to send it to the authenticated user's active device tokens. Requires Firebase configuration.",
-        security: [
-          {
-            bearerAuth: [],
-          },
-        ],
+        security: bearerSecurity,
         requestBody: {
           required: false,
           content: {
@@ -1562,37 +1123,9 @@ export const openApiDocument = {
               },
             },
           },
-          "400": {
-            description: "Validation failed or no active device token exists.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "401": {
-            description: "Missing, invalid, or expired authentication token.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
-          "500": {
-            description:
-              "Firebase is not configured or push notification delivery failed.",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiErrorResponse",
-                },
-              },
-            },
-          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1602,7 +1135,7 @@ export const openApiDocument = {
         tags: ["Reports"],
         summary: "Get Reports module status",
         description:
-          "Temporary scaffold endpoint that confirms the Reports module is mounted.",
+          "Returns report module metadata and available report endpoints.",
         responses: {
           "200": {
             description: "Reports module status returned successfully.",
@@ -1614,6 +1147,175 @@ export const openApiDocument = {
               },
             },
           },
+        },
+      },
+    },
+
+    "/api/v1/reports/emergencies/{emergencyId}": {
+      post: {
+        tags: ["Reports"],
+        summary: "Report an emergency",
+        description:
+          "Creates a report against an emergency. Requires authentication.",
+        security: bearerSecurity,
+        parameters: [
+          uuidPathParameter(
+            "emergencyId",
+            "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          ),
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CreateReportRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Emergency report created successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ReportResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/reports/users/{userId}": {
+      post: {
+        tags: ["Reports"],
+        summary: "Report a user",
+        description:
+          "Creates a report against another user. Users cannot report themselves.",
+        security: bearerSecurity,
+        parameters: [
+          uuidPathParameter("userId", "2f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f"),
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CreateReportRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "User report created successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ReportResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/reports/me": {
+      get: {
+        tags: ["Reports"],
+        summary: "Get my submitted reports",
+        description: "Returns reports submitted by the authenticated user.",
+        security: bearerSecurity,
+        responses: {
+          "200": {
+            description: "My reports returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ReportsResponse",
+                },
+              },
+            },
+          },
+          "401": unauthorizedResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/reports/admin": {
+      get: {
+        tags: ["Reports"],
+        summary: "Get admin report queue",
+        description:
+          "Returns latest reports for admin review. Requires user_profiles.role = admin.",
+        security: bearerSecurity,
+        responses: {
+          "200": {
+            description: "Admin reports returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ReportsResponse",
+                },
+              },
+            },
+          },
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "500": apiErrorResponse,
+        },
+      },
+    },
+
+    "/api/v1/reports/admin/{reportId}/status": {
+      patch: {
+        tags: ["Reports"],
+        summary: "Update report status",
+        description:
+          "Updates report review status. Requires user_profiles.role = admin.",
+        security: bearerSecurity,
+        parameters: [
+          uuidPathParameter("reportId", "3f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f"),
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateReportStatusRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Report status updated successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ReportResponse",
+                },
+              },
+            },
+          },
+          "400": validationFailedResponse,
+          "401": unauthorizedResponse,
+          "403": apiErrorResponse,
+          "404": apiErrorResponse,
+          "500": apiErrorResponse,
         },
       },
     },
@@ -1783,7 +1485,7 @@ export const openApiDocument = {
               },
               status: {
                 type: "string",
-                example: "scaffolded",
+                example: "active",
               },
               plannedEndpoints: {
                 type: "array",
@@ -1816,18 +1518,174 @@ export const openApiDocument = {
           email: {
             type: "string",
             format: "email",
+            nullable: true,
             example: "user@example.com",
           },
           phone: {
             type: "string",
+            nullable: true,
             example: "+923001234567",
           },
           role: {
             type: "string",
+            nullable: true,
             example: "user",
           },
         },
-        required: ["id"],
+        required: ["id", "email", "phone", "role"],
+      },
+
+      AuthSession: {
+        type: "object",
+        properties: {
+          accessToken: {
+            type: "string",
+            example: "supabase-access-token",
+          },
+          refreshToken: {
+            type: "string",
+            example: "supabase-refresh-token",
+          },
+          tokenType: {
+            type: "string",
+            example: "bearer",
+          },
+          expiresIn: {
+            type: "number",
+            example: 3600,
+          },
+          expiresAt: {
+            type: "number",
+            nullable: true,
+            example: 1790000000,
+          },
+        },
+        required: [
+          "accessToken",
+          "refreshToken",
+          "tokenType",
+          "expiresIn",
+          "expiresAt",
+        ],
+      },
+
+      SignupRequest: {
+        type: "object",
+        properties: {
+          fullName: {
+            type: "string",
+            minLength: 2,
+            maxLength: 120,
+            example: "Ahmad Sajid",
+          },
+          email: {
+            type: "string",
+            format: "email",
+            example: "user@example.com",
+          },
+          password: {
+            type: "string",
+            minLength: 8,
+            maxLength: 72,
+            example: "StrongPassword123",
+          },
+          phone: {
+            type: "string",
+            nullable: true,
+            minLength: 5,
+            maxLength: 30,
+            example: "+923001234567",
+          },
+        },
+        required: ["fullName", "email", "password"],
+        additionalProperties: false,
+      },
+
+      LoginRequest: {
+        type: "object",
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "user@example.com",
+          },
+          password: {
+            type: "string",
+            minLength: 1,
+            maxLength: 72,
+            example: "StrongPassword123",
+          },
+        },
+        required: ["email", "password"],
+        additionalProperties: false,
+      },
+
+      RefreshSessionRequest: {
+        type: "object",
+        properties: {
+          refreshToken: {
+            type: "string",
+            example: "supabase-refresh-token",
+          },
+        },
+        required: ["refreshToken"],
+        additionalProperties: false,
+      },
+
+      AuthResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "User logged in successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              user: {
+                $ref: "#/components/schemas/AuthUser",
+              },
+              profile: {
+                $ref: "#/components/schemas/UserProfile",
+              },
+              session: {
+                $ref: "#/components/schemas/AuthSession",
+              },
+            },
+            required: ["user", "profile", "session"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      AuthLogoutResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "User logged out successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              userId: {
+                type: "string",
+                format: "uuid",
+                example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+              },
+            },
+            required: ["userId"],
+          },
+        },
+        required: ["success", "message", "data"],
       },
 
       AuthMeResponse: {
@@ -1847,8 +1705,11 @@ export const openApiDocument = {
               user: {
                 $ref: "#/components/schemas/AuthUser",
               },
+              profile: {
+                $ref: "#/components/schemas/UserProfile",
+              },
             },
-            required: ["user"],
+            required: ["user", "profile"],
           },
         },
         required: ["success", "message", "data"],
@@ -2056,7 +1917,7 @@ export const openApiDocument = {
               },
               status: {
                 type: "string",
-                example: "scaffolded",
+                example: "active",
               },
               plannedEndpoints: {
                 type: "array",
@@ -2167,6 +2028,233 @@ export const openApiDocument = {
               },
             },
             required: ["location"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      NearbyUser: {
+        type: "object",
+        properties: {
+          userId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          fullName: {
+            type: "string",
+            example: "Ahmad Sajid",
+          },
+          phone: {
+            type: "string",
+            nullable: true,
+            example: "+923001234567",
+          },
+          email: {
+            type: "string",
+            format: "email",
+            nullable: true,
+            example: "helper@example.com",
+          },
+          avatarUrl: {
+            type: "string",
+            nullable: true,
+            example: "https://example.com/avatar.png",
+          },
+          role: {
+            type: "string",
+            example: "helper",
+          },
+          isVerified: {
+            type: "boolean",
+            example: false,
+          },
+          isHelperAvailable: {
+            type: "boolean",
+            example: true,
+          },
+          latitude: {
+            type: "number",
+            example: 31.5204,
+          },
+          longitude: {
+            type: "number",
+            example: 74.3587,
+          },
+          accuracyMeters: {
+            type: "number",
+            nullable: true,
+            example: 12,
+          },
+          lastUpdatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          distanceMeters: {
+            type: "number",
+            example: 850.25,
+          },
+        },
+        required: [
+          "userId",
+          "fullName",
+          "phone",
+          "email",
+          "avatarUrl",
+          "role",
+          "isVerified",
+          "isHelperAvailable",
+          "latitude",
+          "longitude",
+          "accuracyMeters",
+          "lastUpdatedAt",
+          "distanceMeters",
+        ],
+      },
+
+      NearbyUsersResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Nearby users returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              users: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/NearbyUser",
+                },
+              },
+            },
+            required: ["users"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      NearbyEmergency: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          requesterId: {
+            type: "string",
+            format: "uuid",
+            example: "2f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          categoryId: {
+            type: "string",
+            format: "uuid",
+            example: "1f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          title: {
+            type: "string",
+            example: "Need medical help",
+          },
+          description: {
+            type: "string",
+            nullable: true,
+            example: "A person has fainted near the road.",
+          },
+          latitude: {
+            type: "number",
+            example: 31.5204,
+          },
+          longitude: {
+            type: "number",
+            example: 74.3587,
+          },
+          radiusKm: {
+            type: "number",
+            example: 5,
+          },
+          status: {
+            type: "string",
+            example: "active",
+          },
+          priority: {
+            type: "string",
+            example: "critical",
+          },
+          resolvedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          cancelledAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          distanceMeters: {
+            type: "number",
+            example: 1250.75,
+          },
+        },
+        required: [
+          "id",
+          "requesterId",
+          "categoryId",
+          "title",
+          "description",
+          "latitude",
+          "longitude",
+          "radiusKm",
+          "status",
+          "priority",
+          "resolvedAt",
+          "cancelledAt",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+          "distanceMeters",
+        ],
+      },
+
+      NearbyEmergenciesResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Nearby emergencies returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              emergencies: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/NearbyEmergency",
+                },
+              },
+            },
+            required: ["emergencies"],
           },
         },
         required: ["success", "message", "data"],
@@ -2439,49 +2527,6 @@ export const openApiDocument = {
               },
             },
             required: ["emergencies"],
-          },
-        },
-        required: ["success", "message", "data"],
-      },
-
-      EmergenciesModuleStatusResponse: {
-        type: "object",
-        properties: {
-          success: {
-            type: "boolean",
-            example: true,
-          },
-          message: {
-            type: "string",
-            example: "Emergencies module is available",
-          },
-          data: {
-            type: "object",
-            properties: {
-              module: {
-                type: "string",
-                example: "emergencies",
-              },
-              status: {
-                type: "string",
-                example: "scaffolded",
-              },
-              plannedEndpoints: {
-                type: "array",
-                items: {
-                  type: "string",
-                },
-                example: [
-                  "POST /api/v1/emergencies",
-                  "GET /api/v1/emergencies",
-                  "GET /api/v1/emergencies/:emergencyId",
-                  "PATCH /api/v1/emergencies/:emergencyId/cancel",
-                  "PATCH /api/v1/emergencies/:emergencyId/resolve",
-                  "GET /api/v1/emergencies/me/history",
-                ],
-              },
-            },
-            required: ["module", "status", "plannedEndpoints"],
           },
         },
         required: ["success", "message", "data"],
@@ -2979,6 +3024,163 @@ export const openApiDocument = {
         required: ["success", "message", "data"],
       },
 
+      ReportStatus: {
+        type: "string",
+        enum: ["pending", "reviewed", "dismissed", "action_taken"],
+        example: "pending",
+      },
+
+      CreateReportRequest: {
+        type: "object",
+        properties: {
+          reason: {
+            type: "string",
+            minLength: 3,
+            maxLength: 160,
+            example: "Fake SOS alert",
+          },
+          description: {
+            type: "string",
+            nullable: true,
+            maxLength: 1000,
+            example: "This emergency appears to be fake or misleading.",
+          },
+        },
+        required: ["reason"],
+        additionalProperties: false,
+      },
+
+      UpdateReportStatusRequest: {
+        type: "object",
+        properties: {
+          status: {
+            type: "string",
+            enum: ["reviewed", "dismissed", "action_taken"],
+            example: "reviewed",
+          },
+        },
+        required: ["status"],
+        additionalProperties: false,
+      },
+
+      Report: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "3f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          reporterId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          emergencyId: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+            example: "1f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          reportedUserId: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+            example: "2f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          reason: {
+            type: "string",
+            example: "Fake SOS alert",
+          },
+          description: {
+            type: "string",
+            nullable: true,
+            example: "This emergency appears to be fake or misleading.",
+          },
+          status: {
+            $ref: "#/components/schemas/ReportStatus",
+          },
+          reviewedBy: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+            example: null,
+          },
+          reviewedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "reporterId",
+          "emergencyId",
+          "reportedUserId",
+          "reason",
+          "description",
+          "status",
+          "reviewedBy",
+          "reviewedAt",
+          "createdAt",
+        ],
+      },
+
+      ReportResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Report status updated successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              report: {
+                $ref: "#/components/schemas/Report",
+              },
+            },
+            required: ["report"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      ReportsResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Admin reports returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              reports: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/Report",
+                },
+              },
+            },
+            required: ["reports"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
       ReportsModuleStatusResponse: {
         type: "object",
         properties: {
@@ -2999,7 +3201,7 @@ export const openApiDocument = {
               },
               status: {
                 type: "string",
-                example: "scaffolded",
+                example: "active",
               },
               plannedEndpoints: {
                 type: "array",

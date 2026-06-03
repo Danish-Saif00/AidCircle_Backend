@@ -2,12 +2,13 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 
 import { env } from "../../config/env.js";
+import { firebaseMessaging } from "../../lib/firebase-admin.js";
+import { supabaseAdmin } from "../../lib/supabase.js";
 import {
   authMiddleware,
   getAuthenticatedUser,
 } from "../../middleware/auth.middleware.js";
 import { AppError } from "../../middleware/error.middleware.js";
-import { supabaseAdmin } from "../../lib/supabase.js";
 import type { ApiSuccessResponse } from "../../types/api.types.js";
 
 type EmergencyPriority = "low" | "medium" | "high" | "critical";
@@ -70,6 +71,46 @@ type EmergencyRow = {
   expires_at: string;
   created_at: string;
   updated_at: string;
+};
+
+type NearbyUserRow = {
+  user_id: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  role: string;
+  is_verified: boolean;
+  is_helper_available: boolean;
+  latitude: number;
+  longitude: number;
+  accuracy_meters: number | null;
+  last_updated_at: string;
+  distance_meters: number;
+};
+
+type UserDeviceTokenRow = {
+  user_id: string;
+  device_token: string;
+};
+
+type NotificationIdRow = {
+  id: string;
+};
+
+type CreateNotificationPayload = {
+  user_id: string;
+  emergency_id: string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+  status: "pending";
+};
+
+type NotificationDeliveryUpdatePayload = {
+  status: "sent" | "failed";
+  sent_at?: string;
+  error_message?: string | null;
 };
 
 type EmergencyCategoriesResponse = {
@@ -210,6 +251,218 @@ function buildCreateEmergencyPayload(params: {
   }
 
   return payload;
+}
+
+function stringifyPushPayload(
+  payload: Record<string, unknown>,
+): Record<string, string> {
+  const data: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (typeof value === "string") {
+      data[key] = value;
+      continue;
+    }
+
+    data[key] = JSON.stringify(value);
+  }
+
+  return data;
+}
+
+function buildEmergencyNotificationPayload(params: {
+  recipientId: string;
+  emergency: EmergencyRow;
+}): CreateNotificationPayload {
+  return {
+    user_id: params.recipientId,
+    emergency_id: params.emergency.id,
+    title: `SOS Alert: ${params.emergency.title}`,
+    body:
+      params.emergency.description ??
+      "Someone nearby needs urgent help. Open AidCircle for details.",
+    payload: {
+      type: "emergency_created",
+      emergencyId: params.emergency.id,
+      requesterId: params.emergency.requester_id,
+      categoryId: params.emergency.category_id,
+      priority: params.emergency.priority,
+      latitude: params.emergency.latitude,
+      longitude: params.emergency.longitude,
+      radiusKm: params.emergency.radius_km,
+    },
+    status: "pending",
+  };
+}
+
+function buildNotificationDeliveryUpdate(params: {
+  status: "sent" | "failed";
+  errorMessage?: string;
+}): NotificationDeliveryUpdatePayload {
+  const payload: NotificationDeliveryUpdatePayload = {
+    status: params.status,
+  };
+
+  if (params.status === "sent") {
+    payload.sent_at = new Date().toISOString();
+    payload.error_message = null;
+  }
+
+  if (params.status === "failed") {
+    payload.error_message =
+      params.errorMessage ?? "Push notification delivery failed";
+  }
+
+  return payload;
+}
+
+function logEmergencyNotificationFailure(error: unknown): void {
+  console.error(
+    JSON.stringify({
+      level: "error",
+      event: "EMERGENCY_NOTIFICATION_FANOUT_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
+async function updateNotificationDeliveryStatus(params: {
+  notificationIds: string[];
+  status: "sent" | "failed";
+  errorMessage?: string;
+}): Promise<void> {
+  if (params.notificationIds.length === 0) {
+    return;
+  }
+
+  const deliveryUpdateParams: {
+    status: "sent" | "failed";
+    errorMessage?: string;
+  } = {
+    status: params.status,
+  };
+
+  if (params.errorMessage !== undefined) {
+    deliveryUpdateParams.errorMessage = params.errorMessage;
+  }
+
+  const updatePayload = buildNotificationDeliveryUpdate(deliveryUpdateParams);
+
+  const { error } = await supabaseAdmin
+    .from("notifications")
+    .update(updatePayload)
+    .in("id", params.notificationIds);
+
+  if (error) {
+    throw AppError.internal("Failed to update notification delivery status");
+  }
+}
+
+async function notifyNearbyUsersAboutEmergency(
+  emergency: EmergencyRow,
+): Promise<void> {
+  try {
+    const { data: nearbyUsersData, error: nearbyUsersError } =
+      await supabaseAdmin.rpc("find_nearby_users", {
+        origin_latitude: emergency.latitude,
+        origin_longitude: emergency.longitude,
+        radius_km: emergency.radius_km,
+        excluded_user_id: emergency.requester_id,
+      });
+
+    if (nearbyUsersError) {
+      throw nearbyUsersError;
+    }
+
+    const nearbyUsers = (nearbyUsersData ?? []) as unknown as NearbyUserRow[];
+
+    if (nearbyUsers.length === 0) {
+      return;
+    }
+
+    const recipientIds = nearbyUsers.map((nearbyUser) => nearbyUser.user_id);
+
+    const notificationPayloads = recipientIds.map((recipientId) =>
+      buildEmergencyNotificationPayload({
+        recipientId,
+        emergency,
+      }),
+    );
+
+    const { data: createdNotifications, error: notificationCreateError } =
+      await supabaseAdmin
+        .from("notifications")
+        .insert(notificationPayloads)
+        .select("id")
+        .returns<NotificationIdRow[]>();
+
+    if (notificationCreateError) {
+      throw notificationCreateError;
+    }
+
+    const notificationIds = createdNotifications.map(
+      (notification) => notification.id,
+    );
+
+    const { data: devices, error: devicesError } = await supabaseAdmin
+      .from("user_devices")
+      .select("user_id,device_token")
+      .in("user_id", recipientIds)
+      .eq("is_active", true)
+      .returns<UserDeviceTokenRow[]>();
+
+    if (devicesError) {
+      throw devicesError;
+    }
+
+    if (!firebaseMessaging || devices.length === 0) {
+      return;
+    }
+
+    const pushResult = await firebaseMessaging.sendEachForMulticast({
+      tokens: devices.map((device) => device.device_token),
+      notification: {
+        title: `SOS Alert: ${emergency.title}`,
+        body:
+          emergency.description ??
+          "Someone nearby needs urgent help. Open AidCircle for details.",
+      },
+      data: stringifyPushPayload({
+        type: "emergency_created",
+        emergencyId: emergency.id,
+        requesterId: emergency.requester_id,
+        categoryId: emergency.category_id,
+        priority: emergency.priority,
+        latitude: emergency.latitude,
+        longitude: emergency.longitude,
+        radiusKm: emergency.radius_km,
+      }),
+    });
+
+    const deliveryStatusParams: {
+      notificationIds: string[];
+      status: "sent" | "failed";
+      errorMessage?: string;
+    } = {
+      notificationIds,
+      status: pushResult.successCount > 0 ? "sent" : "failed",
+    };
+
+    if (pushResult.failureCount > 0) {
+      deliveryStatusParams.errorMessage =
+        "One or more push notifications failed";
+    }
+
+    await updateNotificationDeliveryStatus(deliveryStatusParams);
+  } catch (error) {
+    logEmergencyNotificationFailure(error);
+  }
 }
 
 async function updateOwnedActiveEmergencyStatus(params: {
@@ -353,6 +606,8 @@ emergenciesRouter.post(
     if (!data) {
       throw AppError.internal("Created emergency was not returned");
     }
+
+    await notifyNearbyUsersAboutEmergency(data);
 
     res.status(201).json({
       success: true,
