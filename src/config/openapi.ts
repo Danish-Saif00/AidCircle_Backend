@@ -1246,7 +1246,7 @@ export const openApiDocument = {
         tags: ["Notifications"],
         summary: "Get Notifications module status",
         description:
-          "Temporary scaffold endpoint that confirms the Notifications module is mounted.",
+          "Returns notification module metadata and available notification endpoints.",
         responses: {
           "200": {
             description: "Notifications module status returned successfully.",
@@ -1254,6 +1254,341 @@ export const openApiDocument = {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/NotificationsModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/notifications/devices": {
+      post: {
+        tags: ["Notifications"],
+        summary: "Register device token",
+        description:
+          "Registers or reactivates the authenticated user's Android or iOS device token for push notifications.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/RegisterDeviceRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Device registered successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/DeviceResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Validation failed.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to register device.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/notifications/devices/{deviceId}": {
+      delete: {
+        tags: ["Notifications"],
+        summary: "Deactivate device token",
+        description:
+          "Deactivates one authenticated-user-owned device token without deleting audit data.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "deviceId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "7f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Device deactivated successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/DeviceResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid device id.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Device not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to deactivate device.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/notifications/me": {
+      get: {
+        tags: ["Notifications"],
+        summary: "Get my notifications",
+        description:
+          "Returns the authenticated user's notifications ordered by latest first.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Notifications returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotificationsResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch notifications.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/notifications/{notificationId}/read": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "Mark notification as read",
+        description:
+          "Marks one authenticated-user-owned notification as read.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "notificationId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "8f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Notification marked as read successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotificationResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid notification id.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Notification not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to mark notification as read.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/notifications/test-push": {
+      post: {
+        tags: ["Notifications"],
+        summary: "Send test push notification",
+        description:
+          "Creates a test notification and attempts to send it to the authenticated user's active device tokens. Requires Firebase configuration.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/TestPushRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Test push notification processed successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/TestPushResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Validation failed or no active device token exists.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description:
+              "Firebase is not configured or push notification delivery failed.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
                 },
               },
             },
@@ -2304,6 +2639,304 @@ export const openApiDocument = {
         required: ["success", "message", "data"],
       },
 
+      DevicePlatform: {
+        type: "string",
+        enum: ["android", "ios"],
+        example: "android",
+      },
+
+      NotificationStatus: {
+        type: "string",
+        enum: ["pending", "sent", "failed", "read"],
+        example: "sent",
+      },
+
+      RegisterDeviceRequest: {
+        type: "object",
+        properties: {
+          platform: {
+            $ref: "#/components/schemas/DevicePlatform",
+          },
+          deviceToken: {
+            type: "string",
+            minLength: 10,
+            maxLength: 4096,
+            example: "fcm-device-token-example",
+          },
+        },
+        required: ["platform", "deviceToken"],
+        additionalProperties: false,
+      },
+
+      UserDevice: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "7f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          userId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          platform: {
+            $ref: "#/components/schemas/DevicePlatform",
+          },
+          deviceToken: {
+            type: "string",
+            example: "fcm-device-token-example",
+          },
+          isActive: {
+            type: "boolean",
+            example: true,
+          },
+          lastSeenAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "userId",
+          "platform",
+          "deviceToken",
+          "isActive",
+          "lastSeenAt",
+          "createdAt",
+          "updatedAt",
+        ],
+      },
+
+      DeviceResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Device registered successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              device: {
+                $ref: "#/components/schemas/UserDevice",
+              },
+            },
+            required: ["device"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      UserNotification: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "8f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          userId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          emergencyId: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+            example: "1f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          title: {
+            type: "string",
+            example: "AidCircle test notification",
+          },
+          body: {
+            type: "string",
+            example: "Push notification delivery is working.",
+          },
+          payload: {
+            type: "object",
+            additionalProperties: true,
+            example: {
+              source: "test-push",
+            },
+          },
+          status: {
+            $ref: "#/components/schemas/NotificationStatus",
+          },
+          sentAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          readAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          errorMessage: {
+            type: "string",
+            nullable: true,
+            example: null,
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "userId",
+          "emergencyId",
+          "title",
+          "body",
+          "payload",
+          "status",
+          "sentAt",
+          "readAt",
+          "errorMessage",
+          "createdAt",
+        ],
+      },
+
+      NotificationResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Notification marked as read successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              notification: {
+                $ref: "#/components/schemas/UserNotification",
+              },
+            },
+            required: ["notification"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      NotificationsResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Notifications returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              notifications: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/UserNotification",
+                },
+              },
+            },
+            required: ["notifications"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      TestPushRequest: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            example: "AidCircle test notification",
+          },
+          body: {
+            type: "string",
+            minLength: 1,
+            maxLength: 500,
+            example: "Push notification delivery is working.",
+          },
+          payload: {
+            type: "object",
+            additionalProperties: true,
+            example: {
+              source: "manual-test",
+            },
+          },
+        },
+        additionalProperties: false,
+      },
+
+      TestPushResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Test push notification processed successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              notification: {
+                $ref: "#/components/schemas/UserNotification",
+              },
+              push: {
+                type: "object",
+                properties: {
+                  requestedDevices: {
+                    type: "number",
+                    example: 1,
+                  },
+                  successCount: {
+                    type: "number",
+                    example: 1,
+                  },
+                  failureCount: {
+                    type: "number",
+                    example: 0,
+                  },
+                },
+                required: [
+                  "requestedDevices",
+                  "successCount",
+                  "failureCount",
+                ],
+              },
+            },
+            required: ["notification", "push"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
       NotificationsModuleStatusResponse: {
         type: "object",
         properties: {
@@ -2324,7 +2957,7 @@ export const openApiDocument = {
               },
               status: {
                 type: "string",
-                example: "scaffolded",
+                example: "active",
               },
               plannedEndpoints: {
                 type: "array",
