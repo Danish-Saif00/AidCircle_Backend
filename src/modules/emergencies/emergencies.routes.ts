@@ -10,6 +10,10 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
 import type { ApiSuccessResponse } from "../../types/api.types.js";
 
+type EmergencyPriority = "low" | "medium" | "high" | "critical";
+
+type EmergencyStatus = "active" | "resolved" | "cancelled" | "expired";
+
 type EmergencyCategory = {
   id: string;
   name: string;
@@ -31,10 +35,6 @@ type EmergencyCategoryRow = {
   created_at: string;
   updated_at: string;
 };
-
-type EmergencyPriority = "low" | "medium" | "high" | "critical";
-
-type EmergencyStatus = "active" | "resolved" | "cancelled" | "expired";
 
 type Emergency = {
   id: string;
@@ -94,6 +94,12 @@ type CreateEmergencyPayload = {
   radius_km: number;
   priority: EmergencyPriority;
   expires_at: string;
+};
+
+type EmergencyStatusUpdatePayload = {
+  status: EmergencyStatus;
+  resolved_at?: string;
+  cancelled_at?: string;
 };
 
 const emergencyPrioritySchema = z.enum(["low", "medium", "high", "critical"]);
@@ -204,6 +210,47 @@ function buildCreateEmergencyPayload(params: {
   }
 
   return payload;
+}
+
+async function updateOwnedActiveEmergencyStatus(params: {
+  emergencyId: string;
+  requesterId: string;
+  status: "resolved" | "cancelled";
+}): Promise<EmergencyRow> {
+  const now = new Date().toISOString();
+
+  const updatePayload: EmergencyStatusUpdatePayload = {
+    status: params.status,
+  };
+
+  if (params.status === "resolved") {
+    updatePayload.resolved_at = now;
+  }
+
+  if (params.status === "cancelled") {
+    updatePayload.cancelled_at = now;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("emergencies")
+    .update(updatePayload)
+    .eq("id", params.emergencyId)
+    .eq("requester_id", params.requesterId)
+    .eq("status", "active")
+    .select(getEmergencySelectColumns())
+    .maybeSingle<EmergencyRow>();
+
+  if (error) {
+    throw AppError.internal(`Failed to ${params.status} emergency`);
+  }
+
+  if (!data) {
+    throw AppError.notFound(
+      "Active emergency not found or you are not allowed to update it",
+    );
+  }
+
+  return data;
 }
 
 emergenciesRouter.get(
@@ -318,6 +365,37 @@ emergenciesRouter.post(
 );
 
 emergenciesRouter.get(
+  "/me/history",
+  authMiddleware,
+  async (
+    req: Request,
+    res: Response<ApiSuccessResponse<EmergenciesResponse>>,
+  ) => {
+    const user = getAuthenticatedUser(req);
+
+    const { data, error } = await supabaseAdmin
+      .from("emergencies")
+      .select(getEmergencySelectColumns())
+      .eq("requester_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .returns<EmergencyRow[]>();
+
+    if (error) {
+      throw AppError.internal("Failed to fetch emergency history");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Emergency history returned successfully",
+      data: {
+        emergencies: data.map(mapEmergency),
+      },
+    });
+  },
+);
+
+emergenciesRouter.get(
   "/:emergencyId",
   authMiddleware,
   async (
@@ -345,6 +423,58 @@ emergenciesRouter.get(
       message: "Emergency returned successfully",
       data: {
         emergency: mapEmergency(data),
+      },
+    });
+  },
+);
+
+emergenciesRouter.patch(
+  "/:emergencyId/cancel",
+  authMiddleware,
+  async (
+    req: Request,
+    res: Response<ApiSuccessResponse<EmergencyResponse>>,
+  ) => {
+    const user = getAuthenticatedUser(req);
+    const emergencyId = z.string().uuid().parse(req.params.emergencyId);
+
+    const emergency = await updateOwnedActiveEmergencyStatus({
+      emergencyId,
+      requesterId: user.id,
+      status: "cancelled",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Emergency cancelled successfully",
+      data: {
+        emergency: mapEmergency(emergency),
+      },
+    });
+  },
+);
+
+emergenciesRouter.patch(
+  "/:emergencyId/resolve",
+  authMiddleware,
+  async (
+    req: Request,
+    res: Response<ApiSuccessResponse<EmergencyResponse>>,
+  ) => {
+    const user = getAuthenticatedUser(req);
+    const emergencyId = z.string().uuid().parse(req.params.emergencyId);
+
+    const emergency = await updateOwnedActiveEmergencyStatus({
+      emergencyId,
+      requesterId: user.id,
+      status: "resolved",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Emergency resolved successfully",
+      data: {
+        emergency: mapEmergency(emergency),
       },
     });
   },

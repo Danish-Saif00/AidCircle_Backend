@@ -578,6 +578,52 @@ export const openApiDocument = {
       },
     },
 
+    "/api/v1/emergencies/me/history": {
+      get: {
+        tags: ["Emergencies"],
+        summary: "Get my emergency history",
+        description:
+          "Returns the authenticated user's emergency history ordered by latest first.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Emergency history returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergenciesResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch emergency history.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
     "/api/v1/emergencies/{emergencyId}": {
       get: {
         tags: ["Emergencies"],
@@ -656,12 +702,170 @@ export const openApiDocument = {
       },
     },
 
+    "/api/v1/emergencies/{emergencyId}/cancel": {
+      patch: {
+        tags: ["Emergencies"],
+        summary: "Cancel my active emergency",
+        description:
+          "Cancels an active emergency owned by the authenticated requester.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "emergencyId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Emergency cancelled successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergencyResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid emergency id.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description:
+              "Active emergency not found or requester is not allowed to update it.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to cancel emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/emergencies/{emergencyId}/resolve": {
+      patch: {
+        tags: ["Emergencies"],
+        summary: "Resolve my active emergency",
+        description:
+          "Marks an active emergency owned by the authenticated requester as resolved.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "emergencyId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Emergency resolved successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergencyResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid emergency id.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description:
+              "Active emergency not found or requester is not allowed to update it.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to resolve emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
     "/api/v1/responders": {
       get: {
         tags: ["Responders"],
         summary: "Get Responders module status",
         description:
-          "Temporary scaffold endpoint that confirms the Responders module is mounted.",
+          "Returns responder module metadata and available responder endpoints.",
         responses: {
           "200": {
             description: "Responders module status returned successfully.",
@@ -669,6 +873,366 @@ export const openApiDocument = {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/RespondersModuleStatusResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/responders/emergencies/{emergencyId}/accept": {
+      post: {
+        tags: ["Responders"],
+        summary: "Accept an active emergency",
+        description:
+          "Allows an authenticated user to accept an active emergency as a responder. The requester cannot accept their own emergency.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "emergencyId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "201": {
+            description: "Emergency accepted successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ResponderResponse",
+                },
+              },
+            },
+          },
+          "200": {
+            description:
+              "Emergency accepted successfully after reactivating a previously cancelled responder record.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ResponderResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description:
+              "Invalid emergency id, requester accepting own emergency, or emergency is not active.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Emergency not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "409": {
+            description: "User has already accepted this emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to accept emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/responders/emergencies/{emergencyId}/status": {
+      patch: {
+        tags: ["Responders"],
+        summary: "Update responder status",
+        description:
+          "Updates the authenticated responder status for an active emergency.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "emergencyId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateResponderStatusRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Responder status updated successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ResponderResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Validation failed or emergency is not active.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description:
+              "Active responder record not found for this emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to update responder status.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/responders/emergencies/{emergencyId}/leave": {
+      delete: {
+        tags: ["Responders"],
+        summary: "Leave an emergency response",
+        description:
+          "Marks the authenticated responder record as cancelled instead of deleting it, preserving audit history.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "emergencyId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Responder left emergency successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ResponderResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid emergency id.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description:
+              "Active responder record not found for this emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to leave emergency response.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/responders/me/active": {
+      get: {
+        tags: ["Responders"],
+        summary: "Get my active responder records",
+        description:
+          "Returns authenticated user's active responder records with statuses accepted, on_way, or arrived.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Active responder records returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RespondersResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch active responder records.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/responders/me/history": {
+      get: {
+        tags: ["Responders"],
+        summary: "Get my responder history",
+        description:
+          "Returns authenticated user's responder history ordered by latest accepted time first.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Responder history returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RespondersResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch responder history.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
                 },
               },
             },
@@ -1588,6 +2152,116 @@ export const openApiDocument = {
         required: ["success", "message", "data"],
       },
 
+      ResponderStatus: {
+        type: "string",
+        enum: ["accepted", "on_way", "arrived", "cancelled"],
+        example: "accepted",
+      },
+
+      UpdateResponderStatusRequest: {
+        type: "object",
+        properties: {
+          status: {
+            type: "string",
+            enum: ["on_way", "arrived", "cancelled"],
+            example: "on_way",
+          },
+        },
+        required: ["status"],
+        additionalProperties: false,
+      },
+
+      EmergencyResponder: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "7f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          emergencyId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          responderId: {
+            type: "string",
+            format: "uuid",
+            example: "2f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          status: {
+            $ref: "#/components/schemas/ResponderStatus",
+          },
+          acceptedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "emergencyId",
+          "responderId",
+          "status",
+          "acceptedAt",
+          "updatedAt",
+        ],
+      },
+
+      ResponderResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Emergency accepted successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              responder: {
+                $ref: "#/components/schemas/EmergencyResponder",
+              },
+            },
+            required: ["responder"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      RespondersResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Active responder records returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              responders: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/EmergencyResponder",
+                },
+              },
+            },
+            required: ["responders"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
       RespondersModuleStatusResponse: {
         type: "object",
         properties: {
@@ -1608,7 +2282,7 @@ export const openApiDocument = {
               },
               status: {
                 type: "string",
-                example: "scaffolded",
+                example: "active",
               },
               plannedEndpoints: {
                 type: "array",
