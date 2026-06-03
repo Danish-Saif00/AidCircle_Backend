@@ -40,6 +40,12 @@ const envSchema = z.object({
   SOS_AUTO_EXPIRE_MINUTES: z.coerce.number().int().positive().default(120),
 
   CORS_ALLOWED_ORIGINS: z.string().trim().optional().default(""),
+
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -86,6 +92,13 @@ export const env = {
 
   cors: {
     allowedOrigins: parseAllowedOrigins(parsedEnv.data.CORS_ALLOWED_ORIGINS),
+  },
+
+  rateLimit: {
+    generalWindowMs: parsedEnv.data.RATE_LIMIT_WINDOW_MS,
+    generalMaxRequests: parsedEnv.data.RATE_LIMIT_MAX_REQUESTS,
+    authWindowMs: parsedEnv.data.AUTH_RATE_LIMIT_WINDOW_MS,
+    authMaxRequests: parsedEnv.data.AUTH_RATE_LIMIT_MAX_REQUESTS,
   },
 } as const;
 
