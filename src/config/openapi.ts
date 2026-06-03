@@ -437,19 +437,217 @@ export const openApiDocument = {
       },
     },
 
-    "/api/v1/emergencies": {
+    "/api/v1/emergencies/categories": {
       get: {
         tags: ["Emergencies"],
-        summary: "Get Emergencies module status",
+        summary: "Get emergency categories",
         description:
-          "Temporary scaffold endpoint that confirms the Emergencies module is mounted.",
+          "Returns active emergency categories such as Medical Help, Accident, Fire, Unsafe Situation, Vehicle Breakdown, Lost Person, and Other.",
         responses: {
           "200": {
-            description: "Emergencies module status returned successfully.",
+            description: "Emergency categories returned successfully.",
             content: {
               "application/json": {
                 schema: {
-                  $ref: "#/components/schemas/EmergenciesModuleStatusResponse",
+                  $ref: "#/components/schemas/EmergencyCategoriesResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch emergency categories.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/emergencies": {
+      get: {
+        tags: ["Emergencies"],
+        summary: "Get active emergencies",
+        description:
+          "Returns latest active emergencies. This endpoint requires authentication.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Active emergencies returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergenciesResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch active emergencies.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+
+      post: {
+        tags: ["Emergencies"],
+        summary: "Create SOS emergency",
+        description:
+          "Creates a new SOS emergency for the authenticated user. The database trigger builds the PostGIS location_point automatically.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CreateEmergencyRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Emergency created successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergencyResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Validation failed or emergency category is invalid.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to create emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    "/api/v1/emergencies/{emergencyId}": {
+      get: {
+        tags: ["Emergencies"],
+        summary: "Get emergency detail",
+        description:
+          "Returns one emergency by id. This endpoint requires authentication.",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
+        parameters: [
+          {
+            name: "emergencyId",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Emergency returned successfully.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/EmergencyResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "Invalid emergency id.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "401": {
+            description: "Missing, invalid, or expired authentication token.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Emergency not found.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "Failed to fetch emergency.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiErrorResponse",
                 },
               },
             },
@@ -1070,6 +1268,278 @@ export const openApiDocument = {
               },
             },
             required: ["location"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      EmergencyPriority: {
+        type: "string",
+        enum: ["low", "medium", "high", "critical"],
+        example: "critical",
+      },
+
+      EmergencyStatus: {
+        type: "string",
+        enum: ["active", "resolved", "cancelled", "expired"],
+        example: "active",
+      },
+
+      EmergencyCategory: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          name: {
+            type: "string",
+            example: "Medical Help",
+          },
+          slug: {
+            type: "string",
+            example: "medical-help",
+          },
+          description: {
+            type: "string",
+            nullable: true,
+            example: "Medical assistance needed.",
+          },
+          priority: {
+            $ref: "#/components/schemas/EmergencyPriority",
+          },
+          isActive: {
+            type: "boolean",
+            example: true,
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "priority",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+        ],
+      },
+
+      EmergencyCategoriesResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Emergency categories returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              categories: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/EmergencyCategory",
+                },
+              },
+            },
+            required: ["categories"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      Emergency: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          requesterId: {
+            type: "string",
+            format: "uuid",
+            example: "9f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          categoryId: {
+            type: "string",
+            format: "uuid",
+            example: "1f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          title: {
+            type: "string",
+            example: "Need medical help",
+          },
+          description: {
+            type: "string",
+            nullable: true,
+            example: "A person has fainted near the road.",
+          },
+          latitude: {
+            type: "number",
+            example: 31.5204,
+          },
+          longitude: {
+            type: "number",
+            example: 74.3587,
+          },
+          radiusKm: {
+            type: "number",
+            example: 5,
+          },
+          status: {
+            $ref: "#/components/schemas/EmergencyStatus",
+          },
+          priority: {
+            $ref: "#/components/schemas/EmergencyPriority",
+          },
+          resolvedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          cancelledAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+        required: [
+          "id",
+          "requesterId",
+          "categoryId",
+          "title",
+          "description",
+          "latitude",
+          "longitude",
+          "radiusKm",
+          "status",
+          "priority",
+          "resolvedAt",
+          "cancelledAt",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+        ],
+      },
+
+      CreateEmergencyRequest: {
+        type: "object",
+        properties: {
+          categoryId: {
+            type: "string",
+            format: "uuid",
+            example: "1f5f1b9e-3d5c-4d5c-9f7a-7a8b9c0d1e2f",
+          },
+          title: {
+            type: "string",
+            minLength: 3,
+            maxLength: 160,
+            example: "Need medical help",
+          },
+          description: {
+            type: "string",
+            nullable: true,
+            maxLength: 1000,
+            example: "A person has fainted near the road.",
+          },
+          latitude: {
+            type: "number",
+            minimum: -90,
+            maximum: 90,
+            example: 31.5204,
+          },
+          longitude: {
+            type: "number",
+            minimum: -180,
+            maximum: 180,
+            example: 74.3587,
+          },
+          radiusKm: {
+            type: "number",
+            minimum: 0,
+            maximum: 50,
+            example: 5,
+          },
+          priority: {
+            $ref: "#/components/schemas/EmergencyPriority",
+          },
+        },
+        required: ["categoryId", "title", "latitude", "longitude"],
+        additionalProperties: false,
+      },
+
+      EmergencyResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Emergency created successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              emergency: {
+                $ref: "#/components/schemas/Emergency",
+              },
+            },
+            required: ["emergency"],
+          },
+        },
+        required: ["success", "message", "data"],
+      },
+
+      EmergenciesResponse: {
+        type: "object",
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Active emergencies returned successfully",
+          },
+          data: {
+            type: "object",
+            properties: {
+              emergencies: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/Emergency",
+                },
+              },
+            },
+            required: ["emergencies"],
           },
         },
         required: ["success", "message", "data"],
