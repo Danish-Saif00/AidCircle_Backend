@@ -28,7 +28,7 @@ Backend API for the AidCircle SOS and nearby emergency response mobile app.
 npm install
 Environment Setup
 
-Create a .env file in the backend root.
+Create a .env in the root foler file in the backend root.
 
 Use .env.example as the base:
 
